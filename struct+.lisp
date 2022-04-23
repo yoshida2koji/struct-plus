@@ -52,11 +52,13 @@
   (intern (format nil (format nil "~@:(~a~)"  format) (symbol-name symbol))))
 
 (defun ordered-slot-names (use-slots slots)
-  (remove '_ (mapcar (lambda (s1 s2)
+  (remove-if (lambda (s)
+               (equal "_" (symbol-name s)))
+             (mapcar (lambda (s1 s2)
                        (list s1 s2))
                      use-slots
                      (slots-to-slot-names slots))
-          :key #'car))
+             :key #'car))
 
 (defmacro define-with-struct (str-type)
   `(defmacro ,(intern-name str-type "WITH-~a")

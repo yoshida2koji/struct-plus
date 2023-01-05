@@ -65,14 +65,6 @@
        (slot-names str-var &body body)
      `(with-struct ,slot-names ,str-var ,',str-type ,@body)))
 
-(defmacro define-with-struct-all (str-type slots)
-  `(defmacro ,(intern-name str-type "WITH-~a-ALL")
-       (str-var &body body)
-     (let ((slot-names (slots-to-slot-names ',slots)))
-       `(with-struct ,slot-names ,str-var ,',str-type ,@body))))
-
-
-
 (defmacro define-with-struct-ordered (str-type slots)
   `(defmacro ,(intern-name str-type "WITH-~a-ORDERED")
        (slot-names str-var &body body)
@@ -94,7 +86,7 @@
   `(defun ,(intern-name str-type "~a-SLOT-NAMES") ()
      ',(slots-to-slot-names slots)))
 
-(defun export-symbols (name slots not-exports)
+(defun export-symbols (name slots)
   (let (symbols)
     (flet ((add (fmt &rest syms)
              (push (intern (string-upcase (apply #'format nil fmt syms)))
@@ -104,28 +96,29 @@
       (add "copy-~a" name)
       (add "~a-p" name)
       (add "with-~a" name)
-      (add "with-~a-all" name)
       (add "with-~a-ordered" name)
       (add "let-~a" name)
       (add "let-~a-ordered" name)
       (add "~a-slot-names" name)
       (mapc (lambda (slot)
-              (unless (member slot not-exports)
-                (add "~a" slot)
-                (add "~a-~a" name slot)))
+              (add "~a" slot)
+              (add "~a-~a" name slot))
             (slots-to-slot-names slots)))
     (nreverse symbols)))
 
-(defmacro defstruct+ (name not-exports &rest slots)
-  "if not-exports is :all, any symbols export"
-  `(progn
-     ,(unless (eql not-exports :all)
-        `(export ',(export-symbols name slots not-exports)))
-     (defstruct ,name
-       ,@slots)
-     (define-str-slot-names ,name ,slots)
-     (define-with-struct ,name)
-     (define-with-struct-all ,name ,slots)
-     (define-with-struct-ordered ,name ,slots)
-     (define-let-struct ,name)
-     (define-let-struct-ordered ,name ,slots)))
+(defmacro defstruct+ (name (&key export-all-p include) &rest slots)
+  (let* ((include-str (if (consp include) (car include) include))
+         (include-str-slots (if (consp include) (cdr include) nil))
+         (accessible-slots (append include-str-slots slots)))
+    `(progn
+       ,(when export-all-p
+          `(eval-when (:compile-toplevel :load-toplevel :execute)
+             (export ',(export-symbols name accessible-slots))))
+       (defstruct ,(if include-str `(,name (:include ,include-str)) name)
+         ,@slots)
+       (define-str-slot-names ,name ,accessible-slots)
+       (define-with-struct ,name)
+       (define-with-struct-ordered ,name ,accessible-slots)
+       (define-let-struct ,name)
+       (define-let-struct-ordered ,name ,accessible-slots)
+       (values))))

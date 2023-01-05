@@ -1,5 +1,5 @@
 (defsystem "struct+"
-  :version "0.1"
+  :version "0.2"
   :author "yoshida koji"
   :license "MIT"
   :serial t
@@ -7,7 +7,7 @@
   :in-order-to ((test-op (test-op "struct+/test"))))
 
 (defsystem "struct+/test"
-  :version "0.1"
+  :version "0.2"
   :author "yoshida koji"
   :license "MIT"
   :depends-on ("struct+" "rove")
